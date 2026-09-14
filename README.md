@@ -1,3 +1,4 @@
+
 VIA Internship 2026 
 
 Name: Azindo Abdul Razak
@@ -7,3 +8,4 @@ School: Kwame Nkrumah University of Science and Technology (KNUST)
 About This Repository
 
 This repository contains my Bash scripting and networking assignments for the VIA Internship 2026.
+
